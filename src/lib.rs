@@ -1,4 +1,5 @@
 
+mod des;
 mod rc5;
 mod utils;
 mod word;
