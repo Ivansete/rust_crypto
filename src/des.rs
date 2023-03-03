@@ -94,6 +94,8 @@ fn generate_subkeys(key: u64) -> Vec<u64> {
         ret.push(ki);
     }
 
+    // Validated with https://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+
     ret
 }
 
@@ -202,28 +204,33 @@ fn feistel (half: u64, subkey: u64) -> u64 {
 }
 
 fn encrypt(input: u64, key: u64) -> u64 {
-    let ini_per_res = initial_permutation(input);
-
-    let l0 = ini_per_res & generate_mask(32);
-    let r0 = ini_per_res<<32 & generate_mask(32);
-
-    let subkeys = generate_subkeys(key);
-
-    let mut li = l0;
-    let mut ri = r0;
-    for num_iteration in 0..16 {
-        let kn = subkeys.get(num_iteration).unwrap();
-
-        let prev_li = li;
-        li = ri;
-        ri = prev_li ^ feistel(ri, *kn);
-
-    }
-
-    final_permutation(li | (ri>>32))
+    encrypt_or_decrypt(input, key, true)
 }
 
-fn decrypt(input: u64, key: u64) -> u64 {
+pub fn decrypt(input: u64, key: u64) -> u64 {
+    encrypt_or_decrypt(input, key, false)
+}
+
+/// Both encryption and decryption procedures share the
+/// same algorithm. It only varies in the order the partial
+/// keys are applied.
+fn encrypt_or_decrypt(input: u64, key: u64, encrypt: bool) -> u64 {
+    enum Range {
+        // This is to unify the std::ops::Range<_> & std::iter::Rev<std::ops::Range<_>>
+        // to the same 'Range' type
+        Forward(std::ops::Range<usize>),
+        Backwards(std::iter::Rev<std::ops::Range<usize>>),
+    }
+    impl Iterator for Range {
+        type Item = usize;
+        fn next(&mut self) -> Option<usize> {
+            match self {
+                Range::Forward(range) => range.next(),
+                Range::Backwards(range) => range.next(),
+            }
+        }
+    }
+
     let ini_per_res = initial_permutation(input);
 
     let l0 = ini_per_res & generate_mask(32);
@@ -233,21 +240,63 @@ fn decrypt(input: u64, key: u64) -> u64 {
 
     let mut li = l0;
     let mut ri = r0;
-    for num_iteration in (0..16).rev() {
+
+    let range = if encrypt {
+        Range::Forward(0..16)
+    }
+    else {
+        Range::Backwards((0..16).rev())
+    };
+
+    for num_iteration in range {
         let kn = subkeys.get(num_iteration).unwrap();
 
         let prev_li = li;
         li = ri;
         ri = prev_li ^ feistel(ri, *kn);
-
     }
 
-    final_permutation(li | (ri>>32))
+    final_permutation(ri | (li>>32))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_feistel_function() {
+        // https://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+        let input_key = 0b00010011_00110100_01010111_01111001_10011011_10111100_11011111_11110001_u64;
+        let subkeys = generate_subkeys(input_key);
+        let expected = 0b0010001101001010101010011011101100000000000000000000000000000000_u64;
+        let r0 = 0b11110000101010101111000010101010_00000000_00000000_00000000_00000000_u64;
+        assert_eq!(expected, feistel(r0, *subkeys.get(0).unwrap()));
+    }
+
+    #[test]
+    fn test_expansion() {
+        // https://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+        let input = 0b1111000010101010111100001010101000000000000000000000000000000000_u64;
+        let expected = 0b011110100001010101010101011110100001010101010101_00000000_00000000_u64;
+        assert_eq!(expected, expansion(input));
+    }
+
+    #[test]
+    fn test_subkeys_generation() {
+        // https://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+        let input_key = 0b00010011_00110100_01010111_01111001_10011011_10111100_11011111_11110001_u64;
+        let subkeys = generate_subkeys(input_key);
+        let expected = 0b1100101100111101100010110000111000010111111101010000000000000000_u64;
+        assert_eq!(expected, *subkeys.get(15).unwrap());
+    }
+
+    #[test]
+    fn test_permut_choice_1() {
+        // https://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+        let input = 0b00010011_00110100_01010111_01111001_10011011_10111100_11011111_11110001_u64;
+        let expected = 0b1111000011001100101010101111010101010110011001111000111100000000_u64;
+        assert_eq!(expected, permuted_choice_1(input));
+    }
 
     #[test]
     fn test_permutation() {
