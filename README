@@ -1,5 +1,6 @@
-RC5 implementation.
 
-This repo implements the RC5 as Rivest describes it here https://www.grc.com/r&d/rc5.pdf.
+DES and RC5 implementation.
 
-It also includes test cases that covers many of the test vectors found here https://datatracker.ietf.org/doc/html/draft-krovetz-rc6-rc5-vectors-00#section-4
+The DES (Data Encryption Standard) implementation is self contained in a single file, des.rs.
+
+On the other hand, the RC5 is implemented as Rivest describes it here https://www.grc.com/r&d/rc5.pdf. The RC5 implementation allows multiple RC5 configurations. The implementation includes test cases that covers many of the test vectors found here https://datatracker.ietf.org/doc/html/draft-krovetz-rc6-rc5-vectors-00#section-4
