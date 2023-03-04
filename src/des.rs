@@ -7,15 +7,10 @@ fn permutation(input: u64, index_perm: &[u8]) -> u64 {
     let input_mask = 0x80_00_00_00_00_00_00_00_u64;
 
     for i in 0..index_perm.len() {
-
-        let a = index_perm[i] - 1;
-
-        if input&(input_mask>> a) > 0 {
+        if input&(input_mask>> (index_perm[i] - 1)) > 0 {
             ret |= (input_mask) >> i;
         }
     }
-
-    let a = ret;
 
     ret
 }
@@ -30,8 +25,7 @@ fn final_permutation(input: u64) -> u64 {
     permutation(input, &index_perm)
 }
 
-/// the 32-bit half-block is expanded to 48 bits.
-fn expansion_function(input: u64) -> u64 {
+fn expansion(input: u64) -> u64 {
     let index_perm = vec![32, 1, 2, 3, 4, 5, 4, 5, 6, 7, 8, 9, 8, 9, 10, 11, 12, 13, 12, 13, 14, 15, 16, 17, 16, 17, 18, 19, 20, 21, 20, 21, 22, 23, 24, 25, 24, 25, 26, 27, 28, 29, 28, 29, 30, 31, 32, 1];
     permutation(input, &index_perm)
 }
@@ -116,11 +110,6 @@ fn left_shift(input: u64, shift_amount: u8, num_bits: u8) -> u64 {
     let right = input >> (num_bits - shift_amount);
 
     (left | right) & generate_mask(num_bits)
-}
-
-fn expansion(input: u64) -> u64 {
-    let index_perm = vec![32, 1, 2, 3, 4, 5, 4, 5, 6, 7, 8, 9, 8, 9, 10, 11, 12, 13, 12, 13, 14, 15, 16, 17, 16, 17, 18, 19, 20, 21, 20, 21, 22, 23, 24, 25, 24, 25, 26, 27, 28, 29, 28, 29, 30, 31, 32, 1];
-    permutation(input, &index_perm)
 }
 
 fn s_box(num_box:usize, x:usize, y:usize) -> u8 {
